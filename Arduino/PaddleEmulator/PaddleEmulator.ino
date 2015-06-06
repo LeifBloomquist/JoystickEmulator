@@ -22,7 +22,7 @@ void interruptFunction()
   // Wait while the SID discharges the capacitor.  
   // According to the spec, this should be 320 microseconds.
   // With function overhead and so on, this seems about right.
-  delayMicroseconds(230);
+  delayMicroseconds(235);
   
   // Now, delay the amount required to represent the desired values.
   if (potXleads)
@@ -70,9 +70,7 @@ void PaddleValueToDelay(int valueX, int valueY)
 }
 
 void setup() 
-{
-  Serial.begin(57600);
-  
+{  
   // Configure the outputs that will be used to fake out the paddle signals
   pinModeFast(PIN_POTX_OUT, OUTPUT);
   digitalWriteFast(PIN_POTX_OUT, HIGH);

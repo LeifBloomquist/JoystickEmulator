@@ -1,57 +1,74 @@
+// C64 Paddle Emulator for the Arduino Nano 3.0  (ATmega328)
+
 #include <EnableInterrupt.h>
 #include <digitalWriteFast.h>
 
-// C64 Paddle Emulator for the Arduino Nano 3.0  (ATmega328)
-
-#define PIN_POTX_IN    12
-#define PIN_POTY_IN    11
+#define PIN_POTX_IN    12   // Assume POTX and POTY are pulled low simultaneously, use POTX to trigger.
 #define PIN_POTX_OUT   8
-#define PIN_POTY_OUT
+#define PIN_POTY_OUT   7
 
-volatile uint16_t interruptCountX=0; // The count will go back to 0 after hitting 65535.
-volatile uint16_t interruptCountY=0; // The count will go back to 0 after hitting 65535.
+#define uS_MIN  3   // Smallest permissible value.  See http://www.arduino.cc/en/Reference/DelayMicroseconds
 
-volatile uint16_t potXdelay=3;
-volatile uint16_t potYdelay=0;
+volatile uint16_t potXleads=1;        // if 0, y leads
+volatile uint16_t potXdelay=uS_MIN;
+volatile uint16_t potYdelay=uS_MIN;
 
-uint16_t lastCountX=0;
-uint16_t lastCountY=0;
-
-// The lowest value I've been able to get on the POTX and POTY registers is 2.
-
-void interruptFunctionX() 
+void interruptFunction() 
 {
-  // Turn the POTX output off (low).
+  // Turn the POTX and POTY outputs off (low).
   digitalWriteFast(PIN_POTX_OUT, LOW);
+  digitalWriteFast(PIN_POTY_OUT, LOW);
   
   // Wait while the SID discharges the capacitor.  
   // According to the spec, this should be 320 microseconds.
   // With function overhead and so on, this seems about right.
-  delayMicroseconds(235);
+  delayMicroseconds(230);
   
-  // Now, delay the amount required to represent the desired value.
-  delayMicroseconds(potXdelay);
-  
-  digitalWriteFast(PIN_POTX_OUT, HIGH);
+  // Now, delay the amount required to represent the desired values.
+  if (potXleads)
+  {
+     delayMicroseconds(potXdelay);
+     digitalWriteFast(PIN_POTX_OUT, HIGH);
+     delayMicroseconds(potYdelay);    // This is a delta!
+     digitalWriteFast(PIN_POTY_OUT, HIGH);
+  }
+  else
+  {
+     delayMicroseconds(potYdelay);
+     digitalWriteFast(PIN_POTY_OUT, HIGH);
+     delayMicroseconds(potXdelay);    // This is a delta!
+     digitalWriteFast(PIN_POTX_OUT, HIGH);
+  }
 }
-
-void interruptFunctionY() 
-{
-  interruptCountY++;
-}
-
 
 // Helper function to do the math between desired value and delay used in the interrupts.
-int PaddleValueToDelay(int value)
+void PaddleValueToDelay(int valueX, int valueY)
 {
-   int delay = value;   // A 1:1 mapping actually works pretty well.  If tweaking/scaling is required, do it here.
-   if (delay > 250) delay = 250;  // Larger values cause the interrupt to take too long 
-   if (delay < 3)   delay = 3;    // Smallest permissible value.  See http://www.arduino.cc/en/Reference/DelayMicroseconds
-   return delay;
+   // A 1:1 mapping actually works pretty well.  If tweaking/scaling is required, do it here.
+   int delayX = valueX;                   
+   int delayY = valueY;
+   
+   // Now the trick to keep everything in one interrupt.  Use the other delay as a delta!
+   if (delayX < delayY)
+   {
+      potXleads = 1;
+      delayY -= delayX; 
+   }
+   else
+   {
+     potXleads = 0;
+     delayX -= delayY;
+   }
+   
+   if (delayX > 250)    delayX = 250;     // Larger values cause the interrupt to take too long 
+   if (delayX < uS_MIN) delayX = uS_MIN;
+   if (delayY > 250)    delayY = 250;
+   if (delayY < uS_MIN) delayY = uS_MIN; 
+  
+   potXdelay = delayX;
+   potYdelay = delayY;
 }
 
-
-// Attach the interrupt in setup()
 void setup() 
 {
   Serial.begin(57600);
@@ -59,35 +76,26 @@ void setup()
   // Configure the outputs that will be used to fake out the paddle signals
   pinModeFast(PIN_POTX_OUT, OUTPUT);
   digitalWriteFast(PIN_POTX_OUT, HIGH);
+  pinModeFast(PIN_POTY_OUT, OUTPUT);
+  digitalWriteFast(PIN_POTY_OUT, HIGH);
   
-  // COnfigure the input lines that will be used to detect when the SID pulls them low to start the sequence
-  
-  pinMode(PIN_POTX_IN, INPUT_PULLUP);  // Configure the pin as an input, and turn on the pullup resistor.
-  pinMode(PIN_POTY_IN, INPUT_PULLUP);  // Configure the pin as an input, and turn on the pullup resistor.
-                                    
-  enableInterrupt(PIN_POTX_IN | PINCHANGEINTERRUPT, interruptFunctionX, FALLING );
-  enableInterrupt(PIN_POTY_IN | PINCHANGEINTERRUPT, interruptFunctionY, FALLING );
+  // Configure the input lines that will be used to detect when the SID pulls them low to start the sequence  
+  pinMode(PIN_POTX_IN, INPUT_PULLUP);  // Configure the pin as an input, and turn on the pullup resistor.                                    
+  enableInterrupt(PIN_POTX_IN | PINCHANGEINTERRUPT, interruptFunction, FALLING );
 }
 
 
 void loop() 
 {
-  potXdelay = PaddleValueToDelay(245);
+  for (int t = 0;  t< 255; t++)
+  {
+    PaddleValueToDelay(t, 255-t);
+    delay(10);
+  }
   
-  // Debug code  
-  Serial.println("---------------------------------------");
-  delay(1000);                          // Every second,
-  Serial.print("X Pin was interrupted: ");
-  Serial.print(interruptCountX, DEC);      // print the interrupt count.
-  Serial.print(" times so far.  ");
-  Serial.print("Delta: ");
-  Serial.println(interruptCountX-lastCountX);
-  lastCountX = interruptCountX;
-  
-  Serial.print("Y Pin was interrupted: ");
-  Serial.print(interruptCountY, DEC);      // print the interrupt count.
-  Serial.print(" times so far.  ");
-  Serial.print("Delta: ");
-  Serial.println(interruptCountY-lastCountY);
-  lastCountY = interruptCountY;
+  for (int t = 255;  t>0; t--)
+  {
+    PaddleValueToDelay(t, 255-t);
+    delay(10);
+  }
 }

@@ -7,7 +7,8 @@
 #define PIN_POTX_OUT   8
 #define PIN_POTY_OUT   7
 
-#define uS_MIN  3   // Smallest permissible value.  See http://www.arduino.cc/en/Reference/DelayMicroseconds
+#define uS_MIN  3    // Smallest permissible value.  See http://www.arduino.cc/en/Reference/DelayMicroseconds
+#define uS_MAX  243  // Larger values cause the interrupt to take too long
 
 volatile uint16_t potXleads=1;        // if 0, y leads
 volatile uint16_t potXdelay=uS_MIN;
@@ -60,9 +61,9 @@ void PaddleValueToDelay(int valueX, int valueY)
      delayX -= delayY;
    }
    
-   if (delayX > 250)    delayX = 250;     // Larger values cause the interrupt to take too long 
+   if (delayX > uS_MAX) delayX = uS_MAX;    
    if (delayX < uS_MIN) delayX = uS_MIN;
-   if (delayY > 250)    delayY = 250;
+   if (delayY > uS_MAX) delayY = uS_MAX;
    if (delayY < uS_MIN) delayY = uS_MIN; 
   
    potXdelay = delayX;

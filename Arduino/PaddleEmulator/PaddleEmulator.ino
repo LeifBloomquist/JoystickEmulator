@@ -78,21 +78,21 @@ void setup()
   pinModeFast(PIN_POTY_OUT, OUTPUT);
   digitalWriteFast(PIN_POTY_OUT, HIGH);
   
-  // Configure the input lines that will be used to detect when the SID pulls them low to start the sequence  
+  // Configure the input lines that will be used to detect when the SID pulls POTX low to start the sequence  
   pinMode(PIN_POTX_IN, INPUT_PULLUP);  // Configure the pin as an input, and turn on the pullup resistor.                                    
-  enableInterrupt(PIN_POTX_IN | PINCHANGEINTERRUPT, interruptFunction, FALLING );
+  enableInterrupt(PIN_POTX_IN | PINCHANGEINTERRUPT, interruptFunction, FALLING);
 }
 
 
 void loop() 
 {
-  for (int t = 0;  t< 255; t++)
+  for (int t = 0;  t < 255; t++)
   {
     PaddleValueToDelay(t, 255-t);
     delay(10);
   }
   
-  for (int t = 255;  t>0; t--)
+  for (int t = 255;  t > 0; t--)
   {
     PaddleValueToDelay(t, 255-t);
     delay(10);

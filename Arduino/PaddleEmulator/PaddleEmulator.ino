@@ -1,16 +1,42 @@
 // C64 Paddle Emulator for the Arduino Nano 3.0  (ATmega328)
 
+/*
+
+PINS!
+
+D0=RX (USB Reserved)
+
+D1=TX (USB Reserved)
+
+D2=Joystick Up (Output)
+
+D3=Joystick Down (Output)
+
+D4=Joystick Left (Output)
+
+D5=Joystick Right (Output)
+
+D6=Joystick Fire (Output)
+
+D7=POTX Sense (Input)
+
+D8=POTX PWM (Output)
+
+D9=POTY PWM (Output)
+
+*/
+
 #include <EnableInterrupt.h>
 #include <digitalWriteFast.h>
 
-#define PIN_POTX_IN    12   // Assume POTX and POTY are pulled low simultaneously, use POTX to trigger.
+#define PIN_POTX_IN    7   // Assume POTX and POTY are pulled low simultaneously, use POTX to trigger.
 #define PIN_POTX_OUT   8
-#define PIN_POTY_OUT   7
+#define PIN_POTY_OUT   9
 
 #define uS_MIN  3    // Smallest permissible value.  See http://www.arduino.cc/en/Reference/DelayMicroseconds
 #define uS_MAX  243  // Larger values cause the interrupt to take too long
 
-volatile uint16_t potXleads=1;        // if 0, y leads
+volatile bool potXleads=true;        // if false, y leads
 volatile uint16_t potXdelay=uS_MIN;
 volatile uint16_t potYdelay=uS_MIN;
 
@@ -52,12 +78,12 @@ void PaddleValueToDelay(int valueX, int valueY)
    // Now the trick to keep everything in one interrupt.  Use the other delay as a delta!
    if (delayX < delayY)
    {
-      potXleads = 1;
+      potXleads = true;
       delayY -= delayX; 
    }
    else
    {
-     potXleads = 0;
+     potXleads = false;
      delayX -= delayY;
    }
    

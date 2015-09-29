@@ -100,11 +100,11 @@ void setup()
   pinModeFast(PIN_POTX_OUT, OUTPUT);
   pinModeFast(PIN_POTY_OUT, OUTPUT);
   
-  digitalWriteFast(PIN_POTX_OUT, HIGH);
-  digitalWriteFast(PIN_POTY_OUT, HIGH);
+  digitalWriteFast(PIN_POTX_OUT, LOW);
+  digitalWriteFast(PIN_POTY_OUT, LOW);
   
   // Configure the input line that will be used to detect when the SID pulls POTX low to start the sequence
-  pinMode(PIN_POTX_IN, INPUT_PULLUP);  // Configure the pin as an input, and turn on the pullup resistor.                                    
+  pinModeFast(PIN_POTX_IN, INPUT_PULLUP);  // Configure the pin as an input, and turn on the pullup resistor.                                    
   enableInterrupt(PIN_POTX_IN | PINCHANGEINTERRUPT, interruptFunction, FALLING);
 
   // Serial Link to PC  
@@ -113,19 +113,28 @@ void setup()
 }
 
 void loop() 
-{
+{ 
+  /*
+  digitalWriteFast(PIN_DOWN, HIGH);
+  digitalWriteFast(PIN_RIGHT, HIGH);
+  digitalWriteFast(PIN_LED, HIGH);
+  delay(1000);
+  digitalWriteFast(PIN_DOWN, LOW);
+  digitalWriteFast(PIN_RIGHT, LOW);
+  digitalWriteFast(PIN_LED, LOW);
+  delay(1000);
+  return;
+  */
+  
   // Wait for a string
-  digitalWrite(PIN_LED, HIGH);
+  digitalWriteFast(PIN_LED, HIGH);
   String input = GetInput();
-  digitalWrite(PIN_LED, LOW);
+  digitalWriteFast(PIN_LED, LOW);
 
   if (input == NULL)  // Timed out
   {
     return;
   }
-  
-  Serial.print("input=");
-  Serial.println(input);
 
   char c = input.c_str()[0];
 
